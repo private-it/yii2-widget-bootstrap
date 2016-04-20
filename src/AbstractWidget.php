@@ -19,7 +19,9 @@ abstract class AbstractWidget extends Widget
      * @param Application $app
      * @param string $widgetId
      */
-    abstract public function bootstrap($app, $widgetId = '0');
+    static public function bootstrap($app, $widgetId = '0')
+    {
+    }
 
     /**
      * Initializes the view.
