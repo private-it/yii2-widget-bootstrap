@@ -1,0 +1,13 @@
+{
+  "name": "private-it/yii2-widget-bootstrap",
+  "description": "",
+  "license": "proprietary",
+  "autoload": {
+    "psr-4": {
+      "PrivateIT\\widgets\\bootstrap\\": "src"
+    }
+  },
+  "require": {
+    "yiisoft/yii2": "^2.0"
+  }
+}
