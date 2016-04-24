@@ -4,6 +4,7 @@ namespace PrivateIT\widgets\bootstrap;
 
 
 use yii\base\Widget;
+use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\helpers\Inflector;
 use yii\helpers\Json;
@@ -94,6 +95,14 @@ abstract class AbstractWidget extends Widget
      */
     public function getClientOptions()
     {
-        return $this->clientOptions;
+        return ArrayHelper::merge(
+            [
+                'widget' => [
+                    'id' => $this->getId(),
+                    'cls' => get_class($this),
+                ]
+            ],
+            $this->clientOptions
+        );
     }
 }
