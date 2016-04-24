@@ -31,7 +31,21 @@ abstract class AbstractWidget extends Widget
         if (!isset($this->options['id'])) {
             $this->options['id'] = $this->getId();
         }
-        Html::addCssClass($this->options, Inflector::camel2id(basename(__CLASS__)));
+        Html::addCssClass($this->options, $this->getWidgetCssClass());
+    }
+
+    /**
+     * Generate css class
+     *
+     * @param string $cls
+     * @return string
+     */
+    public function getWidgetCssClass($cls = null)
+    {
+        if (null === $cls) {
+            $cls = get_class($this);
+        }
+        return Inflector::camel2id(basename(str_replace('\\', DIRECTORY_SEPARATOR, $cls)));
     }
 
     /**
