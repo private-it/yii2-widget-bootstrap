@@ -14,11 +14,11 @@ class WidgetBootstrap implements BootstrapInterface
     public function bootstrap($app) {
         if ($app instanceof Application) {
             $request = $app->request;
-            if ($request->isPost) {
-                $widget = $request->post('widget');
-                if ($widget) {
-                    $cls = ArrayHelper::getValue($widget, 'cls');
-                    $widgetId = ArrayHelper::getValue($widget, 'id');
+            $widget = $request->post('widget', $request->get('widget'));
+            if ($widget) {
+                $cls = ArrayHelper::getValue($widget, 'cls');
+                $widgetId = ArrayHelper::getValue($widget, 'id');
+                if (class_exists($cls)) {
                     call_user_func([$cls, 'bootstrap'], $app, $widgetId);
                 }
             }
