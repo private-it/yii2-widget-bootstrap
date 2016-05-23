@@ -2,6 +2,7 @@
   "name": "private-it/yii2-widget-bootstrap",
   "description": "",
   "license": "proprietary",
+  "type": "yii2-extension",
   "autoload": {
     "psr-4": {
       "PrivateIT\\widgets\\bootstrap\\": "src"
