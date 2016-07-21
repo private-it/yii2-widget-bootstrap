@@ -2,13 +2,14 @@
 
 namespace PrivateIT\widgets\bootstrap;
 
-
+use yii\base\Model;
 use yii\base\Widget;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\helpers\Inflector;
 use yii\helpers\Json;
 use yii\web\Application;
+use yii\web\AssetBundle;
 
 abstract class AbstractWidget extends Widget
 {
@@ -20,19 +21,65 @@ abstract class AbstractWidget extends Widget
      * @var array
      */
     public $clientOptions = [];
+    /**
+     * @var AssetBundle
+     */
+    public $assets;
+    /**
+     * @var bool
+     */
+    public $enableWidgetFormData = true;
+    /**
+     * @var bool
+     */
+    public $enableAutoInitJS = true;
+    /**
+     * @var Model
+     */
+    protected $_model;
+    /**
+     * @var Model[]
+     */
+    static public $models;
+
+    /**
+     * @return Model
+     */
+    static function createModel()
+    {
+        return new Model();
+    }
 
     /**
      * @param Application $app
      * @param string $widgetId
+     * @return bool
      */
     static public function bootstrap($app, $widgetId = '0')
     {
+        $result = false;
+        $model = static::createModel();
+        if ($model->load($app->request->post())) {
+            if ($model->submit()) {
+                $result = true;
+            }
+        }
+        static::$models[$widgetId] = $model;
+        return $result;
     }
 
     /**
      * Initializes the view.
      */
     public function init()
+    {
+        $this->initOptions();
+    }
+
+    /**
+     * Initializes the view.
+     */
+    public function initOptions()
     {
         if (!isset($this->options['id'])) {
             $this->options['id'] = $this->getId();
@@ -79,15 +126,54 @@ abstract class AbstractWidget extends Widget
         return Inflector::camel2id(basename(str_replace('\\', DIRECTORY_SEPARATOR, $cls)));
     }
 
+
+    /**
+     * Generate css class
+     *
+     * @param string $cls
+     * @return string
+     */
+    public function getWidgetAssetClass($cls = null)
+    {
+        if (null === $cls) {
+            $cls = get_class($this);
+        }
+        return $cls . 'Asset';
+    }
+
     /**
      * @inheritdoc
      */
     public function run()
     {
-        return Html::tag('div', $this->getContent(), $this->options);
+        if (class_exists($this->getWidgetAssetClass())) {
+            $this->assets = call_user_func([$this->getWidgetAssetClass(), 'register'], $this->view);
+            if ($this->enableAutoInitJS) {
+                if (in_array('js/' . $this->getWidgetCssClass() . '.js', $this->assets->js)) {
+                    $this->initJs();
+                }
+            }
+        }
+        $content = $this->getContent();
+        if ($this->enableWidgetFormData) {
+            $content = static::addFormData($content);
+        }
+        return Html::tag('div', $content, $this->options);
     }
 
     abstract public function getContent();
+
+    public function addFormData($content)
+    {
+        if (stristr($content, '<form')) {
+            $data = implode([
+                Html::hiddenInput('widget[cls]', $this::className()),
+                Html::hiddenInput('widget[id]', $this->getId())
+            ]);
+            $content = preg_replace('~<form[^\>]+>~', '$0' . $data, $content);
+        }
+        return $content;
+    }
 
     /**
      * Returns the options for the grid view JS widget.
@@ -104,5 +190,22 @@ abstract class AbstractWidget extends Widget
             ],
             $this->clientOptions
         );
+    }
+
+    /**
+     * Get base model form
+     *
+     * @return Model
+     */
+    public function getModel()
+    {
+        if (empty($this->_model)) {
+            if (isset(static::$models[$this->getId()])) {
+                $this->_model = static::$models[$this->getId()];
+            } else {
+                $this->_model = static::createModel();
+            }
+        }
+        return $this->_model;
     }
 }
