@@ -2,6 +2,8 @@
 
 namespace PrivateIT\widgets\bootstrap;
 
+use yii\base\Action;
+use yii\base\ActionEvent;
 use yii\base\Model;
 use yii\base\Widget;
 use yii\helpers\ArrayHelper;
@@ -10,9 +12,20 @@ use yii\helpers\Inflector;
 use yii\helpers\Json;
 use yii\web\Application;
 use yii\web\AssetBundle;
+use yii\web\Response;
 
 abstract class AbstractWidget extends Widget
 {
+    /**
+     * @event ActionEvent an event raised right before executing a controller action.
+     * You may set [[ActionEvent::isValid]] to be false to cancel the action execution.
+     */
+    const EVENT_BEFORE_ACTION = 'beforeAction';
+    /**
+     * @event ActionEvent an event raised right after executing a controller action.
+     */
+    const EVENT_AFTER_ACTION = 'afterAction';
+
     /**
      * @var array
      */
@@ -34,10 +47,6 @@ abstract class AbstractWidget extends Widget
      */
     public $enableAutoInitJS = true;
     /**
-     * @var Model
-     */
-    protected $_model;
-    /**
      * @var Model[]
      */
     static public $models;
@@ -51,21 +60,62 @@ abstract class AbstractWidget extends Widget
     }
 
     /**
-     * @param Application $app
      * @param string $widgetId
+     * @param Action $action
+     * @param Application $app
      * @return bool
+     * @throws \yii\base\ExitException
      */
-    static public function bootstrap($app, $widgetId = '0')
+    public function bootstrap($widgetId, $action, $app)
     {
-        $result = false;
-        $model = static::createModel();
-        if ($model->load($app->request->post())) {
-            if ($model->submit()) {
-                $result = true;
+        $this->id = $widgetId;
+        if ($this->beforeAction($action)) {
+
+            $requestType = explode('-', $widgetId);
+            $requestType = array_shift($requestType);
+
+            if (in_array($requestType, ['ajax', 'json'])) {
+
+                $name = Inflector::camelize(str_replace($requestType . '-', '', $widgetId));
+                $method = $requestType . $name;
+
+                if (method_exists(static::className(), $method)) {
+
+                    if ($requestType == 'ajax') {
+                        $this->endAjax(
+                            call_user_func([static::className(), $method], $app)
+                        );
+                    }
+
+                    if ($requestType == 'json') {
+                        $this->endJson(
+                            call_user_func([static::className(), $method], $app)
+                        );
+                    }
+
+                }
+
+            } else {
+
+                $result = false;
+                $model = $this->getModel($widgetId);
+                if ($model->load($app->request->post())) {
+                    if ($model->submit()) {
+                        $result = true;
+                    }
+                }
+                return $result;
+
             }
         }
-        static::$models[$widgetId] = $model;
-        return $result;
+        return false;
+    }
+
+    public function beforeAction($action)
+    {
+        $event = new ActionEvent($action);
+        $this->trigger(self::EVENT_BEFORE_ACTION, $event);
+        return $event->isValid;
     }
 
     /**
@@ -163,6 +213,30 @@ abstract class AbstractWidget extends Widget
 
     abstract public function getContent();
 
+    public function endAjax($content)
+    {
+        ob_start();
+        ob_implicit_flush(false);
+        $view = \Yii::$app->view;
+        $view->beginPage();
+        $view->head();
+        $view->beginBody();
+        echo $content;
+        $view->endBody();
+        $view->endPage(true);
+        \Yii::$app->response->data = ob_get_clean();
+        \Yii::$app->end();
+
+
+    }
+
+    public function endJson($content)
+    {
+        \Yii::$app->response->format = Response::FORMAT_JSON;
+        \Yii::$app->response->data = $content;
+        \Yii::$app->end();
+    }
+
     public function addFormData($content)
     {
         if (stristr($content, '<form')) {
@@ -195,17 +269,17 @@ abstract class AbstractWidget extends Widget
     /**
      * Get base model form
      *
+     * @param string|null $widgetId
      * @return Model
      */
-    public function getModel()
+    public function getModel($widgetId = null)
     {
-        if (empty($this->_model)) {
-            if (isset(static::$models[$this->getId()])) {
-                $this->_model = static::$models[$this->getId()];
-            } else {
-                $this->_model = static::createModel();
-            }
+        if (null === $widgetId) {
+            $widgetId = $this->getId();
         }
-        return $this->_model;
+        if (!isset(static::$models[$widgetId])) {
+            static::$models[$widgetId] = static::createModel();
+        }
+        return static::$models[$widgetId];
     }
 }

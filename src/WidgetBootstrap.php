@@ -2,6 +2,7 @@
 
 namespace PrivateIT\widgets\bootstrap;
 
+use yii\base\ActionEvent;
 use yii\base\BootstrapInterface;
 use yii\base\Event;
 use yii\helpers\ArrayHelper;
@@ -22,12 +23,14 @@ class WidgetBootstrap implements BootstrapInterface
                 $widgetId = ArrayHelper::getValue($widget, 'id');
                 if (null !== $cls && class_exists($cls)) {
                     Event::on(
-                        Application::className(), Application::EVENT_BEFORE_REQUEST,
-                        function () use ($cls, $app, $widgetId) {
-                            call_user_func_array(
-                                [$cls, 'bootstrap'],
-                                [$app, $widgetId]
-                            );
+                        Application::className(), Application::EVENT_BEFORE_ACTION,
+                        function ($e) use ($cls, $app, $widgetId) {
+                            /** @var ActionEvent $e */
+                            /** @var AbstractWidget $widget */
+                            $action = clone $e->action;
+                            $action->id = $widgetId;
+                            $widget = $cls::begin();
+                            $widget->bootstrap($widgetId, $action, $app);
                         }
                     );
                 }
