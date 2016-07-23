@@ -79,17 +79,17 @@ abstract class AbstractWidget extends Widget
                 $name = Inflector::camelize(str_replace($requestType . '-', '', $widgetId));
                 $method = $requestType . $name;
 
-                if (method_exists(static::className(), $method)) {
+                if (method_exists($this, $method)) {
 
                     if ($requestType == 'ajax') {
                         $this->endAjax(
-                            call_user_func([static::className(), $method], $app)
+                            call_user_func([$this, $method], $app)
                         );
                     }
 
                     if ($requestType == 'json') {
                         $this->endJson(
-                            call_user_func([static::className(), $method], $app)
+                            call_user_func([$this, $method], $app)
                         );
                     }
 
