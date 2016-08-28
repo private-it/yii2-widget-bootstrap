@@ -19,18 +19,17 @@ class WidgetBootstrap implements BootstrapInterface
             $request = $app->request;
             $widget = $request->post('widget', $request->get('widget'));
             if ($widget) {
-                $cls = ArrayHelper::getValue($widget, 'cls');
-                $widgetId = ArrayHelper::getValue($widget, 'id');
+                $cls = ArrayHelper::remove($widget, 'cls');
                 if (null !== $cls && class_exists($cls)) {
                     Event::on(
                         Application::className(), Application::EVENT_BEFORE_ACTION,
-                        function ($e) use ($cls, $app, $widgetId) {
+                        function ($e) use ($cls, $app, $widget) {
                             /** @var ActionEvent $e */
                             /** @var AbstractWidget $widget */
                             $action = clone $e->action;
-                            $action->id = $widgetId;
-                            $widget = $cls::begin();
-                            $widget->bootstrap($widgetId, $action, $app);
+                            $widget = $cls::begin($widget);
+                            $action->id = $widget->id;
+                            $widget->bootstrap($widget->id, $action, $app);
                         }
                     );
                 }
