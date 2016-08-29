@@ -50,6 +50,15 @@ abstract class AbstractWidget extends Widget
      * @var Model[]
      */
     static public $models;
+    /**
+     * @var integer a counter used to generate [[id]] for widgets.
+     * @internal
+     */
+    public static $counter = 0;
+    /**
+     * @var string
+     */
+    private $_id;
 
     /**
      * @return Model
@@ -146,6 +155,26 @@ abstract class AbstractWidget extends Widget
         $options = $this->getClientOptions();
         $options = sizeof($options) ? Json::htmlEncode($options) : '';
         $this->getView()->registerJs('jQuery(\'#' . $id . '\').' . $this->getWidgetJsClass() . '(' . $options . ');');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getId($autoGenerate = true)
+    {
+        if ($autoGenerate && $this->_id === null) {
+            $this->_id = $this->getWidgetCssClass() . '-' . static::$counter++;
+        }
+
+        return $this->_id;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setId($value)
+    {
+        $this->_id = $value;
     }
 
     /**
