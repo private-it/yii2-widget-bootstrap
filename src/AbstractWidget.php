@@ -225,6 +225,10 @@ abstract class AbstractWidget extends Widget
      */
     public function run()
     {
+        $content = trim($this->getContent());
+        if (!strlen($content)) {
+            return null;
+        }
         if (class_exists($this->getWidgetAssetClass())) {
             $this->assets = call_user_func([$this->getWidgetAssetClass(), 'register'], $this->view);
             if ($this->enableAutoInitJS) {
@@ -233,7 +237,6 @@ abstract class AbstractWidget extends Widget
                 }
             }
         }
-        $content = $this->getContent();
         if ($this->enableWidgetFormData) {
             $content = static::addFormData($content);
         }
